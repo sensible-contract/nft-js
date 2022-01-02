@@ -9,6 +9,7 @@ import {
   PLACE_HOLDER_SIG,
   Prevouts,
   SatotxSigner,
+  selectSigners,
   SignerConfig,
   SizeTransaction,
   Utils,
@@ -68,6 +69,7 @@ export type NftInput = {
   preNftAddress?: bsv.Address;
   preLockingScript?: bsv.Script;
 
+  rabinPubKeyHashArrayHash?: string;
   nftID?: string;
   publicKey?: bsv.PublicKey;
   inputIndex?: number;
@@ -103,6 +105,7 @@ export type NftGenesisInput = {
     txid: string;
     index: number;
   };
+  rabinPubKeyHashArrayHash?: string;
 
   totalSupply?: BN;
 };
@@ -294,6 +297,9 @@ export async function getNftInput(
     .getNftID(nftInput.lockingScript.toBuffer())
     .toString("hex");
   nftInput.tokenIndex = nftUtxo.tokenIndex;
+  nftInput.rabinPubKeyHashArrayHash = nftProto.getRabinPubKeyHashArrayHash(
+    nftInput.lockingScript.toBuffer()
+  );
 
   return nftInput;
 }
@@ -398,6 +404,10 @@ export async function getNftGenesisInput(
   genesisInput.publicKey = genesisPublicKey;
 
   genesisInput.totalSupply = nftProto.getTotalSupply(output.script.toBuffer());
+
+  genesisInput.rabinPubKeyHashArrayHash = nftProto.getRabinPubKeyHashArrayHash(
+    output.script.toBuffer()
+  );
 
   let genesisContract = NftGenesisFactory.createContract(
     new bsv.PublicKey(genesisPublicKey)
@@ -1103,4 +1113,14 @@ export function getNftGenesisInfo(
   sensibleId = toHex(Utils.getOutpointBuf(genesisTxId, genesisOutputIndex));
 
   return { codehash, genesis, sensibleId };
+}
+
+export async function selectNftSigners(
+  signerConfigs: SignerConfig[] = defaultSignerConfigs
+) {
+  return await selectSigners(
+    signerConfigs,
+    nftProto.SIGNER_NUM,
+    nftProto.SIGNER_VERIFY_NUM
+  );
 }
